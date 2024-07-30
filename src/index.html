@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fastly Dictionary & ACL API Automation Tool</title>
+</head>
+<body>
+    <h1>Fastly Dictionary & ACL API Automation Tool</h1>
+    <form id="apiForm" onsubmit="handleFormSubmit(event)">
+        <label for="apiKey">Fastly API Key:</label>
+        <input type="text" id="apiKey" name="apiKey" required><br><br>
+        
+        <label for="fileUpload">Upload Files:</label>
+        <input type="file" id="fileUpload" name="files" multiple required><br><br>
+        
+        <label for="vclSnippet">VCL Snippet to Delete (optional):</label><br>
+        <textarea id="vclSnippet" name="vclSnippet" rows="4" cols="50" placeholder="Enter VCL snippet to delete here..."></textarea><br><br>
+        
+        <input type="submit" value="Process Files">
+    </form>
+    <div id="loading" style="display:none;">Processing...</div>
+    <div id="error"></div>
+    <div id="success"></div>
+    <div id="logArea"></div>
+
+    <script>
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const apiKey = document.getElementById('apiKey').value;
+            const files = document.getElementById('fileUpload').files;
+            const vclSnippet = document.getElementById('vclSnippet').value;
+
+            if (apiKey && files.length > 0) {
+                const formData = new FormData();
+                formData.append('apiKey', apiKey);
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
+                if (vclSnippet) {
+                    formData.append('vclSnippet', vclSnippet);
+                }
+
+                try {
+                    document.getElementById('loading').style.display = 'block'; // Show loading
+                    document.getElementById('error').innerText = ''; // Clear previous error
+
+                    const response = await fetch('/process', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let resultMessage;
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const result = await response.json();
+                        resultMessage = result.message || 'Operation completed successfully.';
+                    } else if (contentType && contentType.includes('text/html')) {
+                        resultMessage = await response.text();
+                    } else {
+                        resultMessage = 'Unexpected response format.';
+                    }
+
+                    if (response.ok) {
+                        document.getElementById('success').innerText = 'Files processed successfully!';
+                    } else {
+                        throw new Error(resultMessage || 'Unknown error occurred.');
+                    }
+                    
+                    document.getElementById('logArea').innerHTML = resultMessage;
+                } catch (error) {
+                    document.getElementById('error').innerText = 'Error processing files: ' + error.message;
+                } finally {
+                    document.getElementById('loading').style.display = 'none'; // Hide loading
+                }
+            } else {
+                document.getElementById('error').innerText = 'Please enter an API key and select files.';
+            }
+        }
+    </script>
+</body>
+</html>
