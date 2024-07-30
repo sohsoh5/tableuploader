@@ -90,10 +90,10 @@ function generateHTML(message) {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>File Upload</title>
+        <title>Fastly Dictionary & ACL API Automation Tool</title>
     </head>
     <body>
-        <h1>File Upload</h1>
+        <h1>Fastly Dictionary & ACL API Automation Tool</h1>
         <div id="message">
             ${message}
         </div>
