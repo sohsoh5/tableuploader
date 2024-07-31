@@ -97,23 +97,9 @@ function generateHTML(message) {
         <title>Fastly Dictionary & ACL API Automation Tool</title>
     </head>
     <body>
-        <h1>Fastly Dictionary & ACL API Automation Tool</h1>
         <div id="message">
             ${message}
         </div>
-        <form id="uploadForm" action="/process" method="post" enctype="multipart/form-data">
-            <label for="apiKey">API Key:</label>
-            <input type="text" id="apiKey" name="apiKey" required><br><br>
-            <label for="fileUpload">Upload Files:</label>
-            <input type="file" id="fileUpload" name="files" multiple required><br><br>
-            <label for="vclSnippet">VCL Snippet to Delete (optional):</label><br>
-            <textarea id="vclSnippet" name="vclSnippet" rows="4" cols="50" placeholder="Enter VCL snippet to delete here..."></textarea><br><br>
-            <label for="activateVersion">
-                <input type="checkbox" id="activatingVersion" name="activatingVersion" value="1">
-                Activate New Version
-            </label><br><br>
-            <input type="submit" value="Upload Files">
-        </form>
     </body>
     </html>
   `;
