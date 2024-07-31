@@ -37,8 +37,8 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
 
 - The files should look as if you added tables to a VCL snippet. If there is a snippet already existant, grab the entire content desired and drop it into the file
 - These are patch updates, meaning the uploads are fast. However, a patch updates via the entirety of the entry, so if one field is already on the destination table, it will not upload anything. You can get around this by just removing the duplicate entries in that file's table.
-- If there is anything on the vcl snippet field, a new version will be created
-- You can reuse the same page, just repeatedly click the upload button when you have to appropriate files selected. This can make sending a batch of updates very quick to different services that need a version activation vs ones that do not need the activation, one after the other. 
+- If there is anything on the vcl snippet field, a new version will be created for all services involved in that upload batch. Otherwise, version creation depends on if there is a new dictionary or acl, and are individual to each service.
+- You can reuse the same page, just repeatedly click the upload button when you have to appropriate files selected. This can make sending a batch of updates very quick to different services that need a version activation vs ones that do not need the activation, one after the other.
 
 
 ## Local compiling
