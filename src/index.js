@@ -35,7 +35,7 @@ async function handleRequest(event) {
       const formData = parseMultipartFormData(formDataText, boundary);
       console.log("Parsed form data");
 
-      // Extract API key, files, and VCL snippet
+      // Extract API key, files, VCL snippet, and activatingVersion
       const apiKey = formData.apiKey;
       if (!apiKey) {
         throw new Error("API key is missing.");
@@ -48,6 +48,10 @@ async function handleRequest(event) {
       const vclSnippet = formData.vclSnippet || null;
       console.log(`VCL Snippet to delete: ${vclSnippet}`);
 
+      // Set activatingVersion to '1' if checkboxValue is '1'
+      const activatingVersion = formData.activatingVersion === '1' ? '1' : '0';
+      console.log(`Activate version applicable: ${activatingVersion}`);
+      
       let messages = [];
       for (let file of files) {
         const content = file.content;
@@ -56,7 +60,7 @@ async function handleRequest(event) {
         console.log(`Processing file: ${filename} with service ID: ${serviceId}`);
 
         // Process the file content
-        const result = await processFile(apiKey, serviceId, content, vclSnippet);
+        const result = await processFile(apiKey, serviceId, content, vclSnippet, activatingVersion);
         messages.push(result);
       }
 
@@ -104,12 +108,17 @@ function generateHTML(message) {
             <input type="file" id="fileUpload" name="files" multiple required><br><br>
             <label for="vclSnippet">VCL Snippet to Delete (optional):</label><br>
             <textarea id="vclSnippet" name="vclSnippet" rows="4" cols="50" placeholder="Enter VCL snippet to delete here..."></textarea><br><br>
+            <label for="activateVersion">
+                <input type="checkbox" id="activatingVersion" name="activatingVersion" value="1">
+                Activate New Version
+            </label><br><br>
             <input type="submit" value="Upload Files">
         </form>
     </body>
     </html>
   `;
 }
+
 
 // Function to parse multipart form data
 function parseMultipartFormData(body, boundary) {
@@ -141,7 +150,7 @@ function parseMultipartFormData(body, boundary) {
   return data;
 }
 
-async function processFile(apiKey, serviceId, content, vclSnippet) {
+async function processFile(apiKey, serviceId, content, vclSnippet, activatingVersion) {
   console.log(`Starting process for service ID: ${serviceId}`);
 
   // Validate and sanitize the serviceId
@@ -243,9 +252,10 @@ async function processFile(apiKey, serviceId, content, vclSnippet) {
       }
 
       // Activate the new version
-      await activateVersion(serviceId, newVersion, headers, backend);
-      console.log(`Activated new version: ${newVersion}`);
-
+      if (activatingVersion === '1'){
+        await activateVersion(serviceId, newVersion, headers, backend);
+        console.log(`Activated new version: ${newVersion}`);
+      }
     }
     // Batch update dictionaries in the existing version
     for (const [name, entries] of Object.entries(dictionaries)) {
