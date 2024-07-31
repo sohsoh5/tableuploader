@@ -143,7 +143,7 @@ function parseMultipartFormData(body, boundary) {
 
 async function processFile(apiKey, serviceId, content, vclSnippet) {
   console.log(`Starting process for service ID: ${serviceId}`);
-  
+
   // Validate and sanitize the serviceId
   if (!serviceId || typeof serviceId !== 'string' || serviceId.trim() === '') {
     console.error("Invalid service ID:", serviceId);
@@ -156,7 +156,8 @@ async function processFile(apiKey, serviceId, content, vclSnippet) {
   const headers = {
     'Fastly-Key': apiKey,
     'Accept': 'application/json',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Connection': 'close'
   };
 
   try {
@@ -177,65 +178,106 @@ async function processFile(apiKey, serviceId, content, vclSnippet) {
 
     if (!activeVersion) throw new Error("Active version not found.");
 
-    // Clone the active version
-    const newVersion = await cloneActiveVersion(serviceId, activeVersion, headers, backend);
-    console.log(`Cloned to new version: ${newVersion}`);
-    if (!newVersion) throw new Error("Failed to clone the active version.");
+    let newVersion = activeVersion;
+    let needsClone = false;
 
     // Parse the content into dictionaries and ACLs
     const { dictionaries, acls } = parseFileContent(content);
     console.log("Parsed file content into dictionaries and ACLs");
 
-    // Process dictionaries
-    for (const [name, entries] of Object.entries(dictionaries)) {
+    // Check dictionaries
+    for (const name of Object.keys(dictionaries)) {
       const existingDictId = await getDictionaryId(serviceId, activeVersion, name, headers, backend);
-      let dictionaryId;
-      if (existingDictId) {
-        dictionaryId = existingDictId;
-        console.log(`Using existing dictionary ID: ${dictionaryId}`);
-      } else {
-        dictionaryId = await createDictionary(serviceId, newVersion, name, headers, backend);
-        console.log(`Created dictionary: ${name} with ID: ${dictionaryId}`);
+      if (!existingDictId) {
+        needsClone = true;
+        break;
       }
+    }
+
+    // Check ACLs
+    if (!needsClone) {
+      for (const name of Object.keys(acls)) {
+        const existingAclId = await getAclId(serviceId, activeVersion, name, headers, backend);
+        if (!existingAclId) {
+          needsClone = true;
+          break;
+        }
+      }
+    }
+
+    // Force clone if a VCL snippet needs to be deleted
+    if (vclSnippet) {
+      needsClone = true;
+    }
+
+    if (needsClone) {
+      // Clone the active version
+      newVersion = await cloneActiveVersion(serviceId, activeVersion, headers, backend);
+      console.log(`Cloned to new version: ${newVersion}`);
+      if (!newVersion) throw new Error("Failed to clone the active version.");
+
+      // Create dictionaries and ACLs in the new version
+      for (const [name, entries] of Object.entries(dictionaries)) {
+        const dictionaryId = await createDictionary(serviceId, newVersion, name, headers, backend);
+        console.log(`Created dictionary: ${name} with ID: ${dictionaryId}`);
+        if (dictionaryId) {
+          // Batch upload dictionary entries
+          await populateDictionary(serviceId, dictionaryId, entries, headers, backend);
+          console.log(`Populated dictionary: ${name}`);
+        }
+      }
+
+      for (const [name, entries] of Object.entries(acls)) {
+        const aclId = await createAcl(serviceId, newVersion, name, headers, backend);
+        console.log(`Created ACL: ${name} with ID: ${aclId}`);
+        if (aclId) {
+          // Batch upload ACL entries
+          await populateAcl(serviceId, aclId, entries, headers, backend);
+          console.log(`Populated ACL: ${name}`);
+        }
+      }
+
+      // Optionally delete an existing VCL snippet
+      if (vclSnippet) {
+        await deleteVclSnippet(serviceId, newVersion, vclSnippet, headers, backend);
+      }
+
+      // Activate the new version
+      await activateVersion(serviceId, newVersion, headers, backend);
+      console.log(`Activated new version: ${newVersion}`);
+
+    }
+    // Batch update dictionaries in the existing version
+    for (const [name, entries] of Object.entries(dictionaries)) {
+      const dictionaryId = await getDictionaryId(serviceId, activeVersion, name, headers, backend);
       if (dictionaryId) {
         await populateDictionary(serviceId, dictionaryId, entries, headers, backend);
         console.log(`Populated dictionary: ${name}`);
+      } else {
+        console.warn(`Dictionary ${name} does not exist, skipping update.`);
       }
     }
 
-    // Process ACLs
+    // Batch update ACLs in the existing version
     for (const [name, entries] of Object.entries(acls)) {
-      const existingAclId = await getAclId(serviceId, activeVersion, name, headers, backend);
-      let aclId;
-      if (existingAclId) {
-        aclId = existingAclId;
-        console.log(`Using existing ACL ID: ${aclId}`);
-      } else {
-        aclId = await createAcl(serviceId, newVersion, name, headers, backend);
-        console.log(`Created ACL: ${name} with ID: ${aclId}`);
-      }
+      const aclId = await getAclId(serviceId, activeVersion, name, headers, backend);
       if (aclId) {
         await populateAcl(serviceId, aclId, entries, headers, backend);
         console.log(`Populated ACL: ${name}`);
+      } else {
+        console.warn(`ACL ${name} does not exist, skipping update.`);
       }
     }
+    
 
-    // Optionally delete an existing VCL snippet
-    if (vclSnippet) {
-      await deleteVclSnippet(serviceId, newVersion, vclSnippet, headers, backend);
-    }
-
-    // Activate the new version
-    await activateVersion(serviceId, newVersion, headers, backend);
-    console.log(`Activated new version: ${newVersion}`);
-
-    return `Version ${newVersion} activated successfully.`;
+    return `Version ${newVersion} processed successfully.`;
 
   } catch (error) {
     console.error(`Error processing file: ${error.message}`);
     return `Error: ${error.message}`;
   }
 }
+
 
 
 
@@ -315,21 +357,30 @@ async function createDictionary(serviceId, version, name, headers, backend) {
 }
 
 async function populateDictionary(serviceId, dictionaryId, entries, headers, backend) {
+  // Prepare batch update payload
+  const batchItems = [];
   for (const [key, value] of Object.entries(entries)) {
-    const url = `https://api.fastly.com/service/${serviceId}/dictionary/${dictionaryId}/item`;
-    console.log(`Populating dictionary ${dictionaryId} with item ${key}: ${value}`);
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify({ item_key: key, item_value: value }),
-      backend
+    batchItems.push({
+      op: "create", // or "update", "upsert", "delete" based on your logic
+      item_key: key,
+      item_value: value
     });
+  }
 
-    if (!response.ok) {
-      console.error(`Failed to add item ${key}: ${value} to dictionary:`, response.statusText);
-    } else {
-      console.log(`Added item ${key}: ${value} to dictionary`);
-    }
+  const url = `https://api.fastly.com/service/${serviceId}/dictionary/${dictionaryId}/items`;
+  console.log(`Batch updating dictionary ${dictionaryId} with items: ${JSON.stringify(batchItems)}`);
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: headers,
+    body: JSON.stringify({ items: batchItems }),
+    backend
+  });
+
+  if (response.ok) {
+    console.log(`Batch updated dictionary ${dictionaryId}`);
+  } else {
+    console.error(`Failed to batch update dictionary ${dictionaryId}:`, response.statusText);
   }
 }
 
@@ -354,24 +405,32 @@ async function createAcl(serviceId, version, name, headers, backend) {
 }
 
 async function populateAcl(serviceId, aclId, entries, headers, backend) {
+  // Prepare batch update payload
+  const batchEntries = [];
   for (const entry of entries) {
-    const url = `https://api.fastly.com/service/${serviceId}/acl/${aclId}/entry`;
-    console.log(`Populating ACL ${aclId} with entry ${JSON.stringify(entry)}`);
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(entry),
-      backend
+    batchEntries.push({
+      op: "create", // or "update", "delete" based on your logic
+      ip: entry.ip,
+      subnet: entry.subnet
     });
+  }
 
-    if (!response.ok) {
-      console.error(`Failed to add entry ${JSON.stringify(entry)} to ACL:`, response.statusText);
-    } else {
-      console.log(`Added entry ${JSON.stringify(entry)} to ACL`);
-    }
+  const url = `https://api.fastly.com/service/${serviceId}/acl/${aclId}/entries`;
+  console.log(`Batch updating ACL ${aclId} with entries: ${JSON.stringify(batchEntries)}`);
+  
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: headers,
+    body: JSON.stringify({ entries: batchEntries }),
+    backend
+  });
+
+  if (response.ok) {
+    console.log(`Batch updated ACL ${aclId}`);
+  } else {
+    console.error(`Failed to batch update ACL ${aclId}:`, response.statusText);
   }
 }
-
 // Function to delete a VCL snippet
 async function deleteVclSnippet(serviceId, version, snippetName, headers, backend) {
   const url = `https://api.fastly.com/service/${serviceId}/version/${version}/snippet/${snippetName}`;
