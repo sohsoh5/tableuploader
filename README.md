@@ -29,15 +29,15 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
 
 - Procure a properly scoped token, add it to the api key field.
 - Select any number of files via the file selection button. The file should have the service id in the name, followed by _tables.txt. Ex:
-
+```
   23123151_tables.txt
   acl this{
   "127.0.0.1",/32;
   }
-  table that(
+  table that{
   "something": "there",
   }
-  
+```  
 - Enter a single VCL snippet to delete (optional).
 - Check box for version activation if one is created and it is desired.
 - Click upload files and wait a few seconds for it to complete.
@@ -53,13 +53,13 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
 ## Local compiling
 
 If downloading to run locally, you will need to install and create a project on compute@edge: https://www.fastly.com/documentation/guides/compute/. After creation, just place the index.js and index.html into your /src directory. You will also need to add the following into the fastly.toml file:
-
+```
 [local_server]
   [local_server.backends]
     [local_server.backends.fastly_api_backend]
       url = "https://api.fastly.com/"
       override_host = "api.fastly.com"
-
+```
   Perform the fastly compute init command to start the project, then fastly compute serve to have it run locally. Follow the prompt in the command line to access your service and perform nearly limitless uploads. 
 
 
