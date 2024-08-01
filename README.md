@@ -38,7 +38,7 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
   "something": "there",
   }
   
-- Enter a single table to delete (optional).
+- Enter a single VCL snippet to delete (optional).
 - Check box for version activation if one is created and it is desired.
 - Click upload files and wait a few seconds for it to complete.
 
