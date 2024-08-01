@@ -28,8 +28,17 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
 ## Instructions
 
 - Procure a properly scoped token, add it to the api key field.
-- Select any number of files via the file selection button. The file should have the service id in the name, followed by _tables.txt. Ex. 23123151_tables.txt
-- Enter a single table to delete
+- Select any number of files via the file selection button. The file should have the service id in the name, followed by _tables.txt. Ex:
+
+  23123151_tables.txt
+  acl this{
+  "127.0.0.1",/32;
+  }
+  table that(
+  "something": "there",
+  }
+  
+- Enter a single table to delete (optional).
 - Check box for version activation if one is created and it is desired.
 - Click upload files and wait a few seconds for it to complete.
 
