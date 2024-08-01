@@ -23,6 +23,32 @@
         
         <input type="submit" value="Process Files">
     </form>
+    <!-- Instructions Section -->
+    <div id="instructions">
+        <h2>---- Instructions ----</h2>
+        <ul>
+            <li>Procure a properly scoped token and add it to the API key field.</li>
+            <li>Select any number of files via the file selection button. The file should have the service ID in the name, followed by <code>_tables.txt</code>. Example:
+            <pre>
+    23123151_tables.txt
+
+    acl this{
+    "127.0.0.1",/32;
+    }
+
+    table that{
+    "something": "there",
+    }
+
+            </pre>
+            </li>
+            <li>Enter a single table to delete (optional).</li>
+            <li>Check the box for version activation if one is created and it is desired.</li>
+            <li>Click "Upload Files" and wait a few seconds for it to complete.</li>
+            <li>Full <a href="https://github.com/sohsoh5/tableuploader/blob/main/README.md">README link</a></li>
+        <h2>-----------------</h2>
+        </ul>
+    </div>
     <div id="loading" style="display:none;">Processing...</div>
     <div id="error"></div>
     <div id="success"></div>
