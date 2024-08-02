@@ -486,8 +486,8 @@ function parseFileContent(content) {
       acls[aclName] = [];
       currentTable = null;
       console.log(`Detected ACL: ${aclName}`);
-    } else if (currentTable && line.includes(':')) {
-      const [key, value] = line.split(':').map(part => part.trim().replace(/"/g, '').replace(',', ''));
+    } else if (currentTable && line.includes(': ')) {
+      const [key, value] = line.split(': ').map(part => part.trim().replace(/"/g, '').replace(',', ''));
       dictionaries[currentTable][key] = value;
       console.log(`Parsed entry for table ${currentTable}: ${key} = ${value}`);
     } else if (currentAcl) {
