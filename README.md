@@ -12,7 +12,7 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
 - Optionally delete VCL snippets from Fastly configurations - useful if you have a hardcoded snippet for the same named tables and acls, as it'll cause a conflict to have more than one unique named tables/acls.
 - Activate new versions based on user input - if you're uploading a dictionary or acl, or if you enter a value into the prompt box, it will create a new version. It will only activate if the check box is checked.
 - Uses patch api calls, leading to incredibly quick uploads.
-- Able to run locally to circumvent any limitations, such as the ~60 requests the service's backend can make. It's recommended to only run up to a total of 60 acl/dictionary updates total across all of your files at a time.
+- Able to run locally to circumvent any limitations, such as the 32 updates the compute service's backend can make. It's recommended to only run up to a total of 31 acl/dictionary updates total across all of your files at a time.
 
 ## Project Structure
 
@@ -40,7 +40,7 @@ This project is a compute@edge tool for dynamically uploading dictionaries and a
 ```  
 - Enter a single VCL snippet to delete (optional).
 - Check box for version activation if one is created and it is desired.
-- Click upload files and wait a few seconds for it to complete.
+- Click upload files and wait a few moments for it to complete. 100 entries can take seconds while thousands can take a minute or two.
 
 ## Tips and Caveats
 
